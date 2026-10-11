@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyDemonList</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gd: {
+                            dark: '#000000',
+                            card: '#080808',
+                            border: '#1f1f1f',
+                            accent: '#ffffff'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #030303;
+            color: #e5e5e5;
+            font-family: 'Inter', sans-serif;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.05) 0%, transparent 60%),
+                radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.02) 0%, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        /* Glassmorphism & UI Accents */
+        .glass-panel {
+            background: rgba(10, 10, 10, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-panel-hover {
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-panel-hover:hover {
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 255, 255, 0.03);
+        }
+
+        .grid-bg {
+            background-size: 32px 32px;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #030303;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #222;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #444;
+        }
+
+        /* Text Gradients & Subtle Effects */
+        .text-glow {
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+        }
+
+        /* Animated Modal Backdrop */
+        .modal-enter {
+            animation: modalIn 0.2s ease-out forwards;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.96) translateY(8px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-white selection:text-black grid-bg">
+
+    <div id="app" class="flex-1 flex flex-col">
+        <!-- Sleek Navbar -->
+        <header class="border-b border-neutral-900/80 bg-black/80 backdrop-blur-md sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center space-x-3 cursor-pointer group" onclick="router.navigate('home')">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-white to-neutral-400 flex items-center justify-center text-black font-black shadow-lg shadow-white/5 transition group-hover:scale-105">
+                        <i class="fa-solid fa-list-check text-black text-sm"></i>
+                    </div>
+                    <span class="text-lg font-black tracking-wider text-white uppercase transition group-hover:opacity-90">
+                        My<span class="text-neutral-400 font-light">Demon</span>List
+                    </span>
+                </div>
+
+                <div class="flex items-center space-x-3">
+                    <button onclick="router.navigate('home')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider text-neutral-400 hover:text-white hover:bg-neutral-900/60 transition">
+                        <i class="fa-solid fa-compass mr-1.5 opacity-60"></i> Explore
+                    </button>
+                    <div id="auth-nav-container" class="flex items-center space-x-3">
+                        <!-- Dynamic Auth Buttons -->
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main id="router-view" class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Dynamic Route Views Render Here -->
+        </main>
+
+        <!-- Global Modal Window -->
+        <div id="modal-container" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+            <div id="modal-content" class="bg-neutral-950 border border-neutral-800 rounded-2xl w-full max-w-md p-6 relative shadow-2xl modal-enter">
+                <!-- Dynamic Modal Content -->
+            </div>
+        </div>
+
+        <!-- Notification Toast -->
+        <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+            <div id="toast-body" class="bg-neutral-900 border border-neutral-700 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center space-x-3">
+                <i id="toast-icon" class="fa-solid fa-circle-check text-white text-base"></i>
+                <span id="toast-message" class="text-xs font-semibold tracking-wide">Notification</span>
+            </div>
+        </div>
+
+        <script type="module">
+            // Simple Client-Side Router Definition
+            class Router {
+                constructor() {
+                    this.routes = {};
+                    window.addEventListener('hashchange', () => this.handleRoute());
+                }
+
+                addRoute(path, handler) {
+                    this.routes[path] = handler;
+                }
+
+                navigate(path, params = {}) {
+                    let queryString = new URLSearchParams(params).toString();
+                    window.location.hash = queryString ? `${path}?${queryString}` : path;
+                }
+
+                handleRoute() {
+                    const fullHash = window.location.hash.slice(1) || 'home';
+                    const [path, queryString] = fullHash.split('?');
+                    const params = {};
+                    if (queryString) {
+                        new URLSearchParams(queryString).forEach((val, key) => params[key] = val);
+                    }
+
+                    if (this.routes[path]) {
+                        this.routes[path](params);
+                    } else if (this.routes['home']) {
+                        this.routes['home'](params);
+                    }
+                }
+            }
+
+            // Expose router to global scope
+            window.router = new Router();
+
+            // Global State Management
+            window.currentUser = null;
+            window.userProfile = null;
+
+            // Global Helper: Escape HTML
+            window.escapeHtml = function(str) {
+                if (!str) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            };
+
+            // Global Helper: Show Toast Notifications
+            window.showToast = function(message, type = 'success') {
+                const toast = document.getElementById('toast');
+                const toastMessage = document.getElementById('toast-message');
+                const toastIcon = document.getElementById('toast-icon');
+
+                toastMessage.textContent = message;
+                if (type === 'error') {
+                    toastIcon.className = 'fa-solid fa-triangle-exclamation text-red-500 text-base';
+                } else {
+                    toastIcon.className = 'fa-solid fa-circle-check text-emerald-400 text-base';
+                }
+
+                toast.classList.remove('translate-y-20', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+
+                setTimeout(() => {
+                    toast.classList.remove('translate-y-0', 'opacity-100');
+                    toast.classList.add('translate-y-20', 'opacity-0');
+                }, 3000);
+            };
+
+            // Global Helper: Modal Dialog Controls
+            window.openModal = function(htmlContent) {
+                const modalContainer = document.getElementById('modal-container');
+                const modalContent = document.getElementById('modal-content');
+                modalContent.innerHTML = htmlContent;
+                modalContainer.classList.remove('hidden');
+            };
+
+            window.closeModal = function() {
+                const modalContainer = document.getElementById('modal-container');
+                modalContainer.classList.add('hidden');
+            };
+
+            // Helper function to derive secure PBKDF2 password hashes with salt
+            async function hashPassword(password, saltHex = null) {
+                const encoder = new TextEncoder();
+                let salt;
+                if (saltHex) {
+                    salt = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+                } else {
+                    salt = window.crypto.getRandomValues(new Uint8Array(16));
+                }
+                
+                const keyMaterial = await window.crypto.subtle.importKey(
+                    "raw",
+                    encoder.encode(password),
+                    "PBKDF2",
+                    false,
+                    ["deriveBits"]
+                );
+
+                const derivedBits = await window.crypto.subtle.deriveBits(
+                    {
+                        name: "PBKDF2",
+                        salt: salt,
+                        iterations: 100000,
+                        hash: "SHA-256"
+                    },
+                    keyMaterial,
+                    256
+                );
+
+                const hashArray = Array.from(new Uint8Array(derivedBits));
+                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                const actualSaltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
+
+                return { hash: hashHex, salt: actualSaltHex };
+            }
+
+            // LocalStorage persistence for Users, Lists, and Follows
+            window.allUsers = JSON.parse(localStorage.getItem('mydemonlist_users_v2')) || [];
+            window.allLists = JSON.parse(localStorage.getItem('mydemonlist_lists_v2')) || [];
+            window.allFollows = JSON.parse(localStorage.getItem('mydemonlist_follows_v1')) || [];
+
+            function saveListsToStorage() {
+                localStorage.setItem('mydemonlist_lists_v2', JSON.stringify(window.allLists));
+            }
+
+            function saveUsersToStorage() {
+                localStorage.setItem('mydemonlist_users_v2', JSON.stringify(window.allUsers));
+            }
+
+            function saveFollowsToStorage() {
+                localStorage.setItem('mydemonlist_follows_v1', JSON.stringify(window.allFollows));
+            }
+
+            // Theme definitions system
+            window.THEMES = {
+                monochrome: {
+                    name: 'Monochrome',
+                    badge: 'bg-neutral-800 text-neutral-300 border border-neutral-700',
+                    border: 'border-neutral-800',
+                    bg: 'bg-neutral-950/80',
+                    accentText: 'text-white',
+                    accentBg: 'bg-white text-black hover:bg-neutral-200',
+                    glow: 'shadow-white/5'
+                },
+                crimson: {
+                    name: 'Neon Crimson',
+                    badge: 'bg-red-950/80 text-red-400 border border-red-800/60',
+                    border: 'border-red-900/50',
+                    bg: 'bg-red-950/20',
+                    accentText: 'text-red-400',
+                    accentBg: 'bg-red-600 text-white hover:bg-red-500',
+                    glow: 'shadow-red-600/20'
+                },
+                emerald: {
+                    name: 'Emerald Matrix',
+                    badge: 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/60',
+                    border: 'border-emerald-900/50',
+                    bg: 'bg-emerald-950/20',
+                    accentText: 'text-emerald-400',
+                    accentBg: 'bg-emerald-600 text-white hover:bg-emerald-500',
+                    glow: 'shadow-emerald-600/20'
+                },
+                violet: {
+                    name: 'Cyber Violet',
+                    badge: 'bg-purple-950/80 text-purple-400 border border-purple-800/60',
+                    border: 'border-purple-900/50',
+                    bg: 'bg-purple-950/20',
+                    accentText: 'text-purple-400',
+                    accentBg: 'bg-purple-600 text-white hover:bg-purple-500',
+                    glow: 'shadow-purple-600/20'
+                },
+                gold: {
+                    name: 'Gold Trophy',
+                    badge: 'bg-amber-950/80 text-amber-400 border border-amber-800/60',
+                    border: 'border-amber-900/50',
+                    bg: 'bg-amber-950/20',
+                    accentText: 'text-amber-400',
+                    accentBg: 'bg-amber-500 text-black font-black hover:bg-amber-400',
+                    glow: 'shadow-amber-500/20'
+                },
+                light: {
+                    name: 'Pure Light',
+                    badge: 'bg-neutral-200 text-neutral-900 border border-neutral-300 font-bold',
+                    border: 'border-neutral-700',
+                    bg: 'bg-neutral-900',
+                    accentText: 'text-neutral-100',
+                    accentBg: 'bg-neutral-100 text-black hover:bg-white',
+                    glow: 'shadow-white/10'
+                }
+            };
+
+            window.getTheme = function(themeKey) {
+                return window.THEMES[themeKey] || window.THEMES.monochrome;
+            };
+
+            // Avatar helper HTML renderer
+            window.getAvatarHtml = function(user, sizeClass = "w-8 h-8", textClass = "text-xs") {
+                const initial = (user && user.username) ? user.username.charAt(0).toUpperCase() : '?';
+                if (user && user.avatarUrl && user.avatarUrl.trim()) {
+                    return `
+                        <div class="${sizeClass} rounded-xl overflow-hidden bg-neutral-900 border border-neutral-800 flex-shrink-0">
+                            <img src="${escapeHtml(user.avatarUrl.trim())}" alt="${escapeHtml(user.username)}" class="w-full h-full object-cover" onerror="this.outerHTML='<div class=\'w-full h-full bg-neutral-800 flex items-center justify-center ${textClass} font-black text-white uppercase\'>${initial}</div>'">
+                        </div>
+                    `;
+                }
+                return `
+                    <div class="${sizeClass} rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center ${textClass} font-black text-white uppercase flex-shrink-0">
+                        ${initial}
+                    </div>
+                `;
+            };
+
+            // Helper functions for follower social system
+            window.isFollowing = function(followerId, targetUserId) {
+                if (!followerId || !targetUserId) return false;
+                return window.allFollows.some(f => f.followerId === followerId && f.followingId === targetUserId);
+            };
+
+            window.getFollowersCount = function(userId) {
+                return window.allFollows.filter(f => f.followingId === userId).length;
+            };
+
+            window.getFollowingCount = function(userId) {
+                return window.allFollows.filter(f => f.followerId === userId).length;
+            };
+
+            window.toggleFollowUser = function(targetUserId) {
+                if (!window.currentUser || window.currentUser.isAnonymous || !window.userProfile) {
+                    openLoginModal();
+                    return;
+                }
+
+                if (window.userProfile.uid === targetUserId) {
+                    showToast("You cannot follow yourself!", "error");
+                    return;
+                }
+
+                const myUid = window.userProfile.uid;
+                const existingIndex = window.allFollows.findIndex(f => f.followerId === myUid && f.followingId === targetUserId);
+
+                const targetUser = window.allUsers.find(u => u.uid === targetUserId);
+                const targetName = targetUser ? targetUser.username : 'creator';
+
+                if (existingIndex !== -1) {
+                    window.allFollows.splice(existingIndex, 1);
+                    showToast(`Unfollowed ${targetName}`);
+                } else {
+                    window.allFollows.push({ followerId: myUid, followingId: targetUserId, timestamp: Date.now() });
+                    showToast(`You are now following ${targetName}!`);
+                }
+
+                saveFollowsToStorage();
+
+                const currentHash = window.location.hash.slice(1) || 'home';
+                const [path, queryString] = currentHash.split('?');
+                const params = {};
+                if (queryString) {
+                    new URLSearchParams(queryString).forEach((val, key) => params[key] = val);
+                }
+                if (window.router.routes[path]) {
+                    window.router.routes[path](params);
+                }
+            };
+
+            window.openFollowersModal = function(userId) {
+                const user = window.allUsers.find(u => u.uid === userId);
+                if (!user) return;
+
+                const followers = window.allFollows
+                    .filter(f => f.followingId === userId)
+                    .map(f => window.allUsers.find(u => u.uid === f.followerId))
+                    .filter(Boolean);
+
+                openModal(`
+                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-neutral-800">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-users text-xs text-neutral-400"></i>
+                            <h3 class="text-sm font-bold text-white uppercase tracking-wider">${escapeHtml(user.username)}'s Followers (${followers.length})</h3>
+                        </div>
+                        <button onclick="closeModal()" class="text-neutral-500 hover:text-white transition"><i class="fa-solid fa-xmark text-sm"></i></button>
+                    </div>
+                    <div class="max-h-80 overflow-y-auto space-y-2 pr-1">
+                        ${followers.length === 0 ? `
+                            <p class="text-center text-xs text-neutral-500 py-6">No followers yet.</p>
+                        ` : followers.map(u => `
+                            <div onclick="router.navigate('profile', { uid: '${u.uid}' }); closeModal();" class="p-2.5 rounded-xl bg-neutral-900/60 hover:bg-neutral-800 border border-neutral-800 flex items-center justify-between cursor-pointer transition">
+                                <div class="flex items-center space-x-3">
+                                    ${getAvatarHtml(u, "w-8 h-8", "text-xs")}
+                                    <span class="text-xs font-bold text-white">${escapeHtml(u.username)}</span>
+                                </div>
+                                <span class="text-[10px] text-neutral-400 font-semibold">View →</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `);
+            };
+
+            window.openFollowingModal = function(userId) {
+                const user = window.allUsers.find(u => u.uid === userId);
+                if (!user) return;
+
+                const following = window.allFollows
+                    .filter(f => f.followerId === userId)
+                    .map(f => window.allUsers.find(u => u.uid === f.followingId))
+                    .filter(Boolean);
+
+                openModal(`
+                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-neutral-800">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-user-plus text-xs text-neutral-400"></i>
+                            <h3 class="text-sm font-bold text-white uppercase tracking-wider">${escapeHtml(user.username)} is Following (${following.length})</h3>
+                        </div>
+                        <button onclick="closeModal()" class="text-neutral-500 hover:text-white transition"><i class="fa-solid fa-xmark text-sm"></i></button>
+                    </div>
+                    <div class="max-h-80 overflow-y-auto space-y-2 pr-1">
+                        ${following.length === 0 ? `
+                            <p class="text-center text-xs text-neutral-500 py-6">Not following anyone yet.</p>
+                        ` : following.map(u => `
+                            <div onclick="router.navigate('profile', { uid: '${u.uid}' }); closeModal();" class="p-2.5 rounded-xl bg-neutral-900/60 hover:bg-neutral-800 border border-neutral-800 flex items-center justify-between cursor-pointer transition">
+                                <div class="flex items-center space-x-3">
+                                    ${getAvatarHtml(u, "w-8 h-8", "text-xs")}
+                                    <span class="text-xs font-bold text-white">${escapeHtml(u.username)}</span>
+                                </div>
+                                <span class="text-[10px] text-neutral-400 font-semibold">View →</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `);
+            };
+
+            window.updateAuthNav = function() {
+                const navContainer = document.getElementById('auth-nav-container');
+                if (currentUser && !currentUser.isAnonymous && userProfile) {
+                    navContainer.innerHTML = `
+                        <button onclick="router.navigate('dashboard')" class="px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-white text-xs font-semibold flex items-center space-x-2 transition">
+                            ${getAvatarHtml(userProfile, "w-5 h-5", "text-[10px]")}
+                            <span class="hidden sm:inline">${escapeHtml(userProfile.username)}</span>
+                        </button>
+                        <button onclick="handleLogout()" class="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-900 transition" title="Log Out">
+                            <i class="fa-solid fa-right-from-bracket text-xs"></i>
+                        </button>
+                    `;
+                } else {
+                    navContainer.innerHTML = `
+                        <button onclick="openLoginModal()" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-neutral-300 hover:text-white hover:bg-neutral-900 transition">
+                            Log In
+                        </button>
+                        <button onclick="openRegisterModal()" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white text-black hover:bg-neutral-200 transition shadow-lg shadow-white/5">
+                            Sign Up
+                        </button>
+                    `;
+                }
+            };
+
+            window.openLoginModal = function() {
+                openModal(`
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center text-white">
+                                <i class="fa-solid fa-right-to-bracket text-xs"></i>
+                            </div>
+                            <h3 class="text-base font-bold text-white uppercase tracking-wider">Log In</h3>
+                        </div>
+                        <button onclick="closeModal()" class="text-neutral-500 hover:text-white transition"><i class="fa-solid fa-xmark text-sm"></i></button>
+                    </div>
+                    <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">Username</label>
+                            <input type="text" id="login-username" required class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs" placeholder="e.g. SpaceUK">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">Password</label>
+                            <input type="password" id="login-password" required class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs" placeholder="••••••••">
+                        </div>
+                        <button type="submit" id="login-btn" class="w-full py-2.5 bg-white text-black font-bold rounded-xl hover:bg-neutral-200 transition text-xs uppercase tracking-wider flex items-center justify-center space-x-2">
+                            <span>Log In</span>
+                        </button>
+                    </form>
+                `);
+            };
+
+            window.openRegisterModal = function() {
+                openModal(`
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center text-white">
+                                <i class="fa-solid fa-user-plus text-xs"></i>
+                            </div>
+                            <h3 class="text-base font-bold text-white uppercase tracking-wider">Create Account</h3>
+                        </div>
+                        <button onclick="closeModal()" class="text-neutral-500 hover:text-white transition"><i class="fa-solid fa-xmark text-sm"></i></button>
+                    </div>
+                    <form onsubmit="handleRegisterSubmit(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">Username</label>
+                            <input type="text" id="register-username" required class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs" placeholder="e.g. Zoink">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">Avatar Image URL (Optional)</label>
+                            <input type="url" id="register-avatar" class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs" placeholder="https://example.com/avatar.png">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">Password</label>
+                            <input type="password" id="register-password" required minlength="4" class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs" placeholder="••••••••">
+                        </div>
+                        <button type="submit" id="register-btn" class="w-full py-2.5 bg-white text-black font-bold rounded-xl hover:bg-neutral-200 transition text-xs uppercase tracking-wider flex items-center justify-center space-x-2">
+                            <span>Create Account</span>
+                        </button>
+                    </form>
+                `);
+            };
+
+            window.handleLoginSubmit = async function(e) {
+                e.preventDefault();
+                const btn = document.getElementById('login-btn');
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i><span>Logging In...</span>`;
+
+                const username = document.getElementById('login-username').value.trim();
+                const password = document.getElementById('login-password').value;
+
+                const existingUser = allUsers.find(u => u.username.toLowerCase() === username.toLowerCase());
+                if (!existingUser) {
+                    showToast('Account not found. Please register first.', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = `<span>Log In</span>`;
+                    return;
+                }
+
+                let isMatch = false;
+                if (existingUser.passwordSalt && existingUser.passwordHash) {
+                    const hashed = await hashPassword(password, existingUser.passwordSalt);
+                    isMatch = (hashed.hash === existingUser.passwordHash);
+                } else if (existingUser.password) {
+                    isMatch = (existingUser.password === password);
+                }
+
+                if (!isMatch) {
+                    showToast('Incorrect password.', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = `<span>Log In</span>`;
+                    return;
+                }
+
+                currentUser = { uid: existingUser.uid, isAnonymous: false };
+                userProfile = existingUser;
+
+                updateAuthNav();
+                closeModal();
+                showToast(`Welcome back, ${userProfile.username}!`);
+                router.navigate('dashboard');
+            };
+
+            window.handleRegisterSubmit = async function(e) {
+                e.preventDefault();
+                const btn = document.getElementById('register-btn');
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i><span>Creating Account...</span>`;
+
+                const username = document.getElementById('register-username').value.trim();
+                const avatarUrl = document.getElementById('register-avatar').value.trim();
+                const password = document.getElementById('register-password').value;
+
+                if (!username || username.length < 2) {
+                    showToast('Username must be at least 2 characters long.', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = `<span>Create Account</span>`;
+                    return;
+                }
+
+                const usernameExists = allUsers.some(u => u.username.toLowerCase() === username.toLowerCase());
+                if (usernameExists) {
+                    showToast('Username is already taken. Please choose another.', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = `<span>Create Account</span>`;
+                    return;
+                }
+
+                const { hash, salt } = await hashPassword(password);
+                const uid = 'usr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+
+                const newUser = {
+                    uid: uid,
+                    username: username,
+                    avatarUrl: avatarUrl || '',
+                    passwordHash: hash,
+                    passwordSalt: salt,
+                    theme: 'monochrome',
+                    createdAt: Date.now()
+                };
+
+                allUsers.push(newUser);
+                saveUsersToStorage();
+
+                currentUser = { uid: newUser.uid, isAnonymous: false };
+                userProfile = newUser;
+
+                updateAuthNav();
+                closeModal();
+                showToast(`Account created! Welcome, ${username}!`);
+                router.navigate('dashboard');
+            };
+
+            window.handleLogout = function() {
+                currentUser = null;
+                userProfile = null;
+                updateAuthNav();
+                showToast('Logged out successfully.');
+                router.navigate('home');
+            };
+
+            window.openEditProfileModal = function() {
+                if (!userProfile) return;
+                openModal(`
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center text-white">
+                                <i class="fa-solid fa-user-pen text-xs"></i>
+                            </div>
+                            <h3 class="text-base font-bold text-white uppercase tracking-wider">Customize Profile</h3>
+                        </div>
+                        <button onclick="closeModal()" class="text-neutral-500 hover:text-white transition"><i class="fa-solid fa-xmark text-sm"></i></button>
+                    </div>
+                    <form onsubmit="handleSaveProfile(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">Avatar Image URL</label>
+                            <input type="url" id="edit-avatar" value="${escapeHtml(userProfile.avatarUrl || '')}" class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs" placeholder="https://example.com/avatar.png">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">Profile Theme</label>
+                            <select id="edit-theme" class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs">
+                                <option value="monochrome" ${userProfile.theme === 'monochrome' ? 'selected' : ''}>Monochrome (Default)</option>
+                                <option value="crimson" ${userProfile.theme === 'crimson' ? 'selected' : ''}>Neon Crimson</option>
+                                <option value="emerald" ${userProfile.theme === 'emerald' ? 'selected' : ''}>Emerald Matrix</option>
+                                <option value="violet" ${userProfile.theme === 'violet' ? 'selected' : ''}>Cyber Violet</option>
+                                <option value="gold" ${userProfile.theme === 'gold' ? 'selected' : ''}>Gold Trophy</option>
+                                <option value="light" ${userProfile.theme === 'light' ? 'selected' : ''}>Pure Light</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full py-2.5 bg-white text-black font-bold rounded-xl hover:bg-neutral-200 transition text-xs uppercase tracking-wider">
+                            Save Profile
+                        </button>
+                    </form>
+                `);
+            };
+
+            window.handleSaveProfile = function(e) {
+                e.preventDefault();
+                if (!userProfile) return;
+
+                const avatarUrl = document.getElementById('edit-avatar').value.trim();
+                const theme = document.getElementById('edit-theme').value;
+
+                userProfile.avatarUrl = avatarUrl;
+                userProfile.theme = theme;
+
+                const userIndex = allUsers.findIndex(u => u.uid === userProfile.uid);
+                if (userIndex !== -1) {
+                    allUsers[userIndex] = userProfile;
+                    saveUsersToStorage();
+                }
+
+                updateAuthNav();
+                closeModal();
+                showToast('Profile customization saved!');
+                renderDashboardView();
+            };
+
+            window.activeHomeTab = 'all';
+
+            window.setHomeTab = function(tab) {
+                window.activeHomeTab = tab;
+                renderHomeView();
+            };
+
+            function renderHomeView() {
+                const myUid = userProfile ? userProfile.uid : null;
+                let displayedLists = allLists;
+
+                if (window.activeHomeTab === 'following' && myUid) {
+                    const followingIds = allFollows.filter(f => f.followerId === myUid).map(f => f.followingId);
+                    displayedLists = allLists.filter(l => followingIds.includes(l.userId));
+                }
+
+                const routerView = document.getElementById('router-view');
+                routerView.innerHTML = `
+                    <div class="space-y-12 py-4">
+                        <!-- Hero Header -->
+                        <div class="glass-panel rounded-3xl p-8 md:p-14 text-center relative overflow-hidden border border-neutral-800/80">
+                            <div class="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none"></div>
+                            <div class="max-w-2xl mx-auto space-y-5 relative z-10">
+                                <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full border border-neutral-800 bg-black/50 text-neutral-400 text-[10px] font-bold uppercase tracking-widest">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                                    <span>Geometry Dash Custom Ranking Hub</span>
+                                </div>
+                                <h1 class="text-3xl md:text-5xl font-black text-white tracking-tight uppercase">
+                                    Rank & Share <br><span class="text-neutral-500 font-light italic">Your Custom Lists</span>
+                                </h1>
+                                <p class="text-neutral-400 text-xs md:text-sm leading-relaxed max-w-lg mx-auto font-normal">
+                                    Create personal demon lists, level tierings, or top challenge leaderboards with complete level ID details and video proof.
+                                </p>
+                                ${!currentUser || currentUser.isAnonymous ? `
+                                    <div class="pt-3 flex justify-center space-x-3">
+                                        <button onclick="openRegisterModal()" class="px-6 py-3 bg-white text-black font-bold rounded-xl hover:bg-neutral-200 transition text-xs uppercase tracking-wider shadow-lg shadow-white/10">
+                                            Create Account
+                                        </button>
+                                    </div>
+                                ` : `
+                                    <div class="pt-3 flex justify-center">
+                                        <button onclick="router.navigate('dashboard')" class="px-6 py-3 bg-white text-black font-bold rounded-xl hover:bg-neutral-200 transition text-xs uppercase tracking-wider shadow-lg shadow-white/10">
+                                            My Creator Dashboard
+                                        </button>
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+
+                        <!-- Live User Search Bar -->
+                        <div class="max-w-xl mx-auto relative">
+                            <div class="relative group">
+                                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 text-xs transition group-focus-within:text-white"></i>
+                                <input type="text" id="user-search-input" oninput="handleUserSearch(this.value)" placeholder="Search creators by username..." class="w-full bg-neutral-950/80 border border-neutral-800/80 rounded-2xl pl-11 pr-4 py-3.5 text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-600 transition text-xs font-medium">
+                            </div>
+                            <div id="search-results-dropdown" class="hidden mt-2 bg-neutral-950 border border-neutral-800 rounded-2xl overflow-hidden z-20 absolute left-0 right-0 max-w-xl mx-auto shadow-2xl"></div>
+                        </div>
+
+                        <!-- Community Lists Showcase with Followers Filter Tab -->
+                        <div class="space-y-6">
+                            <div class="flex items-center justify-between border-b border-neutral-900 pb-4">
+                                <div class="flex items-center space-x-4">
+                                    <button onclick="setHomeTab('all')" class="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider transition ${window.activeHomeTab === 'all' ? 'text-white border-b-2 border-white pb-1' : 'text-neutral-500 hover:text-neutral-300'}">
+                                        <i class="fa-solid fa-fire text-xs"></i>
+                                        <span>All Lists (${allLists.length})</span>
+                                    </button>
+                                    ${myUid ? `
+                                        <button onclick="setHomeTab('following')" class="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider transition ${window.activeHomeTab === 'following' ? 'text-white border-b-2 border-white pb-1' : 'text-neutral-500 hover:text-neutral-300'}">
+                                            <i class="fa-solid fa-users text-xs"></i>
+                                            <span>Following Feed</span>
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+
+                            <div id="community-lists-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                                ${displayedLists.length === 0 ? `
+                                    <div class="col-span-full py-16 text-center glass-panel rounded-2xl border border-neutral-800">
+                                        <i class="fa-solid fa-folder-open text-3xl text-neutral-700 mb-3"></i>
+                                        <p class="text-neutral-500 text-xs">
+                                            ${window.activeHomeTab === 'following' ? "No lists from creators you follow yet." : "No public lists available yet."}
+                                        </p>
+                                    </div>
+                                ` : displayedLists.map(list => {
+                                    const author = allUsers.find(u => u.uid === list.userId) || { username: 'Unknown', avatarUrl: '' };
+                                    const demonCount = list.demons ? list.demons.length : 0;
+                                    return `
+                                        <div onclick="router.navigate('list_detail', { listId: '${list.id}' })" class="glass-panel glass-panel-hover rounded-2xl p-6 cursor-pointer flex flex-col justify-between group">
+                                            <div class="space-y-4">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="px-2.5 py-1 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 text-[10px] font-bold tracking-wider">
+                                                        ${demonCount} DEMONS
+                                                    </span>
+                                                    <div onclick="event.stopPropagation(); router.navigate('profile', { uid: '${list.userId}' })" class="flex items-center space-x-2 group/author hover:opacity-80 transition">
+                                                        ${getAvatarHtml(author, "w-5 h-5", "text-[9px]")}
+                                                        <span class="text-xs text-neutral-400 group-hover/author:text-white font-medium">${escapeHtml(author.username)}</span>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h3 class="text-base font-bold text-white group-hover:text-neutral-200 transition tracking-tight">${escapeHtml(list.title)}</h3>
+                                                    <p class="text-neutral-500 text-xs mt-1.5 line-clamp-2 leading-relaxed font-normal">${escapeHtml(list.description || 'No description provided.')}</p>
+                                                </div>
+                                            </div>
+                                            <div class="pt-5 mt-5 border-t border-neutral-900/80 flex items-center justify-between text-[11px] text-neutral-500">
+                                                <span>Updated ${new Date(list.updatedAt || list.createdAt || Date.now()).toLocaleDateString()}</span>
+                                                <span class="text-white font-semibold flex items-center space-x-1 group-hover:translate-x-1 transition">
+                                                    <span>Explore</span>
+                                                    <i class="fa-solid fa-arrow-right text-[9px] ml-1"></i>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            window.handleUserSearch = function(query) {
+                const dropdown = document.getElementById('search-results-dropdown');
+                if (!query || query.trim().length === 0) {
+                    dropdown.classList.add('hidden');
+                    return;
+                }
+
+                const matches = allUsers.filter(u => u.username.toLowerCase().includes(query.toLowerCase().trim()));
+                if (matches.length === 0) {
+                    dropdown.innerHTML = `<div class="p-4 text-center text-xs text-neutral-500">No creators found matching "${escapeHtml(query)}"</div>`;
+                } else {
+                    dropdown.innerHTML = matches.map(u => `
+                        <div onclick="router.navigate('profile', { uid: '${u.uid}' }); document.getElementById('search-results-dropdown').classList.add('hidden');" class="p-3.5 hover:bg-neutral-900 border-b border-neutral-900/80 last:border-0 cursor-pointer flex items-center justify-between transition">
+                            <div class="flex items-center space-x-3">
+                                ${getAvatarHtml(u, "w-8 h-8", "text-xs")}
+                                <span class="text-xs font-bold text-white">${escapeHtml(u.username)}</span>
+                            </div>
+                            <span class="text-[10px] text-neutral-500 font-semibold">View Profile →</span>
+                        </div>
+                    `).join('');
+                }
+                dropdown.classList.remove('hidden');
+            };
+
+            function renderDashboardView() {
+                const routerView = document.getElementById('router-view');
+                if (!currentUser || currentUser.isAnonymous || !userProfile) {
+                    routerView.innerHTML = `
+                        <div class="py-24 text-center space-y-4 glass-panel rounded-3xl max-w-lg mx-auto border border-neutral-800">
+                            <i class="fa-solid fa-lock text-3xl text-neutral-600"></i>
+                            <h2 class="text-xl font-bold text-white uppercase tracking-wider">Authentication Required</h2>
+                            <p class="text-neutral-500 text-xs">Please log in or sign up to create and manage your demon lists.</p>
+                            <button onclick="openLoginModal()" class="px-5 py-2.5 bg-white text-black font-bold rounded-xl text-xs uppercase tracking-wider">Log In Now</button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const myListLists = allLists.filter(l => l.userId === userProfile.uid);
+                const theme = getTheme(userProfile.theme);
+
+                const followersCount = getFollowersCount(userProfile.uid);
+                const followingCount = getFollowingCount(userProfile.uid);
+
+                routerView.innerHTML = `
+                    <div class="space-y-8 py-4">
+                        <!-- Profile Header Card -->
+                        <div class="glass-panel rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 border ${theme.border} ${theme.bg}">
+                            <div class="flex items-center space-x-5 w-full md:w-auto">
+                                ${getAvatarHtml(userProfile, "w-16 h-16", "text-2xl")}
+                                <div class="space-y-1.5">
+                                    <div class="flex items-center space-x-2">
+                                        <h1 class="text-2xl font-black text-white">${escapeHtml(userProfile.username)}</h1>
+                                        <span class="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase ${theme.badge}">${theme.name}</span>
+                                        <button onclick="openEditProfileModal()" class="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition" title="Customize Profile & Theme">
+                                            <i class="fa-solid fa-palette text-xs"></i>
+                                        </button>
+                                    </div>
+                                    <div class="flex items-center space-x-4 text-xs">
+                                        <button onclick="openFollowersModal('${userProfile.uid}')" class="text-neutral-400 hover:text-white font-medium transition">
+                                            <strong class="text-white">${followersCount}</strong> Followers
+                                        </button>
+                                        <button onclick="openFollowingModal('${userProfile.uid}')" class="text-neutral-400 hover:text-white font-medium transition">
+                                            <strong class="text-white">${followingCount}</strong> Following
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3 w-full md:w-auto justify-end">
+                                <button onclick="openEditProfileModal()" class="px-3.5 py-2 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-white text-xs font-semibold transition flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-user-pen text-xs"></i>
+                                    <span>Customize Profile</span>
+                                </button>
+                                <button onclick="openCreateListModal()" class="px-4 py-2 rounded-xl ${theme.accentBg} font-bold text-xs uppercase tracking-wider hover:opacity-90 transition shadow-lg ${theme.glow} flex items-center space-x-2">
+                                    <i class="fa-solid fa-plus text-xs"></i>
+                                    <span>New Demon List</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- My Lists Container -->
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between border-b border-neutral-900 pb-3">
+                                <h2 class="text-sm font-bold text-white uppercase tracking-wider">My Demon Lists (${myListLists.length})</h2>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                                ${myListLists.length === 0 ? `
+                                    <div class="col-span-full py-16 text-center glass-panel rounded-2xl border border-neutral-800">
+                                        <i class="fa-solid fa-folder-plus text-3xl text-neutral-700 mb-3"></i>
+                                        <p class="text-neutral-500 text-xs mb-4">You haven't created any demon lists yet.</p>
+                                        <button onclick="openCreateListModal()" class="px-4 py-2 bg-white text-black font-bold rounded-xl text-xs uppercase tracking-wider">Create First List</button>
+                                    </div>
+                                ` : myListLists.map(list => {
+                                    const demonCount = list.demons ? list.demons.length : 0;
+                                    return `
+                                        <div class="glass-panel glass-panel-hover rounded-2xl p-6 flex flex-col justify-between group">
+                                            <div class="space-y-4 cursor-pointer" onclick="router.navigate('list_detail', { listId: '${list.id}' })">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="px-2.5 py-1 rounded-lg ${theme.badge} text-[10px] font-bold tracking-wider">
+                                                        ${demonCount} DEMONS
+                                                    </span>
+                                                    <div class="flex items-center space-x-1">
+                                                        <button onclick="event.stopPropagation(); openEditListModal('${list.id}')" class="p-1.5 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white transition" title="Edit List Info">
+                                                            <i class="fa-solid fa-pen text-xs"></i>
+                                                        </button>
+                                                        <button onclick="event.stopPropagation(); confirmDeleteList('${list.id}')" class="p-1.5 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white transition" title="Delete List">
+                                                            <i class="fa-solid fa-trash text-xs"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h3 class="text-base font-bold text-white group-hover:${theme.accentText} transition tracking-tight">${escapeHtml(list.title)}</h3>
+                                                    <p class="text-neutral-500 text-xs mt-1.5 line-clamp-2 leading-relaxed font-normal">${escapeHtml(list.description || 'No description provided.')}</p>
+                                                </div>
+                                            </div>
+                                            <div class="pt-5 mt-5 border-t border-neutral-900/80 flex items-center justify-between text-[11px] text-neutral-500">
+                                                <span>${new Date(list.updatedAt || list.createdAt || Date.now()).toLocaleDateString()}</span>
+                                                <button onclick="router.navigate('editor', { listId: '${list.id}' })" class="text-white font-semibold hover:underline">Manage Demons →</button>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            window.openCreateListModal = function() {
+                openModal(`
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center text-white">
+                                <i class="fa-solid fa-plus text-xs"></i>
+                            </div>
+                            <h3 class="text-base font-bold text-white uppercase tracking-wider">Create Demon List</h3>
+                        </div>
+                        <button onclick="closeModal()" class="text-neutral-500 hover:text-white transition"><i class="fa-solid fa-xmark text-sm"></i></button>
+                    </div>
+                    <form onsubmit="handleCreateListSubmit(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">List Title</label>
+                            <input type="text" id="create-list-title" required class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs" placeholder="e.g. Top 10 Extreme Demons">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">Description (Optional)</label>
+                            <textarea id="create-list-desc" rows="3" class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs" placeholder="Briefly describe your demon ranking list..."></textarea>
+                        </div>
+                        <button type="submit" class="w-full py-2.5 bg-white text-black font-bold rounded-xl hover:bg-neutral-200 transition text-xs uppercase tracking-wider">
+                            Create List
+                        </button>
+                    </form>
+                `);
+            };
+
+            window.handleCreateListSubmit = function(e) {
+                e.preventDefault();
+                if (!userProfile) return;
+
+                const title = document.getElementById('create-list-title').value.trim();
+                const description = document.getElementById('create-list-desc').value.trim();
+
+                const newList = {
+                    id: 'lst_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+                    userId: userProfile.uid,
+                    title: title,
+                    description: description,
+                    demons: [],
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
+                };
+
+                allLists.unshift(newList);
+                saveListsToStorage();
+                closeModal();
+                showToast('Demon list created!');
+                router.navigate('editor', { listId: newList.id });
+            };
+
+            window.openEditListModal = function(listId) {
+                const list = allLists.find(l => l.id === listId);
+                if (!list) return;
+
+                openModal(`
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center text-white">
+                                <i class="fa-solid fa-pen text-xs"></i>
+                            </div>
+                            <h3 class="text-base font-bold text-white uppercase tracking-wider">Edit List Details</h3>
+                        </div>
+                        <button onclick="closeModal()" class="text-neutral-500 hover:text-white transition"><i class="fa-solid fa-xmark text-sm"></i></button>
+                    </div>
+                    <form onsubmit="handleEditListSubmit(event, '${list.id}')" class="space-y-4">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">List Title</label>
+                            <input type="text" id="edit-list-title" required value="${escapeHtml(list.title)}" class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">Description</label>
+                            <textarea id="edit-list-desc" rows="3" class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs">${escapeHtml(list.description || '')}</textarea>
+                        </div>
+                        <button type="submit" class="w-full py-2.5 bg-white text-black font-bold rounded-xl hover:bg-neutral-200 transition text-xs uppercase tracking-wider">
+                            Save Changes
+                        </button>
+                    </form>
+                `);
+            };
+
+            window.handleEditListSubmit = function(e, listId) {
+                e.preventDefault();
+                const list = allLists.find(l => l.id === listId);
+                if (!list) return;
+
+                list.title = document.getElementById('edit-list-title').value.trim();
+                list.description = document.getElementById('edit-list-desc').value.trim();
+                list.updatedAt = Date.now();
+
+                saveListsToStorage();
+                closeModal();
+                showToast('List updated!');
+                renderDashboardView();
+            };
+
+            window.confirmDeleteList = function(listId) {
+                openModal(`
+                    <div class="space-y-4 text-center py-2">
+                        <div class="w-12 h-12 rounded-2xl bg-red-950/50 border border-red-900/80 text-red-400 flex items-center justify-center mx-auto text-lg">
+                            <i class="fa-solid fa-trash"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-white uppercase tracking-wider">Delete Demon List?</h3>
+                            <p class="text-neutral-400 text-xs mt-1">This action cannot be undone. All rankings in this list will be permanently removed.</p>
+                        </div>
+                        <div class="flex items-center space-x-3 pt-2">
+                            <button onclick="closeModal()" class="flex-1 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white font-semibold text-xs transition">Cancel</button>
+                            <button onclick="executeDeleteList('${listId}')" class="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider transition">Delete List</button>
+                        </div>
+                    </div>
+                `);
+            };
+
+            window.executeDeleteList = function(listId) {
+                window.allLists = allLists.filter(l => l.id !== listId);
+                saveListsToStorage();
+                closeModal();
+                showToast('List deleted');
+                renderDashboardView();
+            };
+
+            function renderProfileView(params) {
+                const uid = params.uid;
+                const profileUser = allUsers.find(u => u.uid === uid) || { username: 'Unknown', avatarUrl: '', theme: 'monochrome' };
+                const userLists = allLists.filter(l => l.userId === uid);
+                const theme = getTheme(profileUser.theme);
+
+                const myUid = userProfile ? userProfile.uid : null;
+                const isOwnProfile = myUid === uid;
+                const following = isFollowing(myUid, uid);
+
+                const followersCount = getFollowersCount(uid);
+                const followingCount = getFollowingCount(uid);
+
+                const routerView = document.getElementById('router-view');
+                routerView.innerHTML = `
+                    <div class="space-y-8 py-4">
+                        <div class="glass-panel rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 border ${theme.border} ${theme.bg}">
+                            <div class="flex items-center space-x-5">
+                                ${getAvatarHtml(profileUser, "w-16 h-16", "text-2xl")}
+                                <div class="space-y-1.5">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-[10px] uppercase font-bold tracking-widest text-neutral-500">Creator Profile</span>
+                                        <span class="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase ${theme.badge}">${theme.name}</span>
+                                    </div>
+                                    <h1 class="text-2xl font-black text-white">${escapeHtml(profileUser.username)}</h1>
+                                    <div class="flex items-center space-x-4 text-xs">
+                                        <button onclick="openFollowersModal('${uid}')" class="text-neutral-400 hover:text-white font-medium transition">
+                                            <strong class="text-white">${followersCount}</strong> Followers
+                                        </button>
+                                        <button onclick="openFollowingModal('${uid}')" class="text-neutral-400 hover:text-white font-medium transition">
+                                            <strong class="text-white">${followingCount}</strong> Following
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            ${!isOwnProfile ? `
+                                <div>
+                                    <button onclick="toggleFollowUser('${uid}')" class="px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition shadow-lg ${following ? 'bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700' : `${theme.accentBg} ${theme.glow}`}">
+                                        <i class="${following ? 'fa-solid fa-user-check' : 'fa-solid fa-user-plus'} mr-1.5"></i>
+                                        <span>${following ? 'Following' : 'Follow Creator'}</span>
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <div class="space-y-4">
+                            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Demon Lists by ${escapeHtml(profileUser.username)} (${userLists.length})</h2>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                                ${userLists.length === 0 ? `
+                                    <div class="col-span-full py-16 text-center glass-panel rounded-2xl border border-neutral-800">
+                                        <p class="text-neutral-500 text-xs">This creator has no public demon lists yet.</p>
+                                    </div>
+                                ` : userLists.map(list => `
+                                    <div onclick="router.navigate('list_detail', { listId: '${list.id}' })" class="glass-panel glass-panel-hover rounded-2xl p-6 cursor-pointer flex flex-col justify-between group border ${theme.border}">
+                                        <div class="space-y-4">
+                                            <div class="flex items-center justify-between">
+                                                <span class="px-2.5 py-1 rounded-lg ${theme.badge} text-[10px] font-bold tracking-wider">
+                                                    ${list.demons ? list.demons.length : 0} DEMONS
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <h3 class="text-base font-bold text-white group-hover:${theme.accentText} transition tracking-tight">${escapeHtml(list.title)}</h3>
+                                                <p class="text-neutral-500 text-xs mt-1.5 line-clamp-2 leading-relaxed font-normal">${escapeHtml(list.description || 'No description provided.')}</p>
+                                            </div>
+                                        </div>
+                                        <div class="pt-5 mt-5 border-t border-neutral-900/80 flex items-center justify-between text-[11px] text-neutral-500">
+                                            <span>${new Date(list.updatedAt || list.createdAt || Date.now()).toLocaleDateString()}</span>
+                                            <span class="text-white font-semibold flex items-center space-x-1 group-hover:translate-x-1 transition">
+                                                <span>View</span>
+                                                <i class="fa-solid fa-arrow-right text-[9px] ml-1"></i>
+                                            </span>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function renderListDetailView(params) {
+                const listId = params.listId;
+                const list = allLists.find(l => l.id === listId);
+                const routerView = document.getElementById('router-view');
+                if (!list) {
+                    routerView.innerHTML = `<div class="py-20 text-center text-neutral-500 text-xs">Demon list not found.</div>`;
+                    return;
+                }
+
+                const author = allUsers.find(u => u.uid === list.userId) || { username: 'Unknown', avatarUrl: '', theme: 'monochrome' };
+                const isOwner = currentUser && !currentUser.isAnonymous && userProfile && userProfile.uid === list.userId;
+                const theme = getTheme(author.theme);
+
+                routerView.innerHTML = `
+                    <div class="space-y-8 py-4">
+                        <!-- Header Banner -->
+                        <div class="glass-panel rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border ${theme.border} ${theme.bg}">
+                            <div class="space-y-3">
+                                <div class="flex items-center space-x-3">
+                                    <span class="px-2.5 py-1 rounded-lg ${theme.badge} text-[10px] font-bold tracking-wider">
+                                        ${list.demons ? list.demons.length : 0} DEMONS
+                                    </span>
+                                    <div class="flex items-center space-x-2 cursor-pointer" onclick="router.navigate('profile', { uid: '${list.userId}' })">
+                                        ${getAvatarHtml(author, "w-5 h-5", "text-[9px]")}
+                                        <span class="text-xs text-neutral-400 font-medium hover:text-white transition">${escapeHtml(author.username)}</span>
+                                    </div>
+                                </div>
+                                <h1 class="text-2xl md:text-3xl font-black text-white tracking-tight">${escapeHtml(list.title)}</h1>
+                                <p class="text-neutral-400 text-xs leading-relaxed max-w-2xl font-normal">${escapeHtml(list.description || 'No description provided.')}</p>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <button onclick="navigator.clipboard.writeText(window.location.href); showToast('Link copied to clipboard!');" class="px-3.5 py-2 rounded-xl bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white font-semibold text-xs transition flex items-center space-x-2">
+                                    <i class="fa-solid fa-share-nodes text-neutral-400"></i>
+                                    <span>Share</span>
+                                </button>
+                                ${isOwner ? `
+                                    <button onclick="router.navigate('editor', { listId: '${list.id}' })" class="px-3.5 py-2 rounded-xl ${theme.accentBg} font-bold text-xs uppercase tracking-wider transition flex items-center space-x-2 shadow-lg ${theme.glow}">
+                                        <i class="fa-solid fa-pen text-xs"></i>
+                                        <span>Manage</span>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <!-- Demon Ranking Entries -->
+                        <div class="space-y-3">
+                            <h2 class="text-sm font-bold text-white uppercase tracking-wider border-b border-neutral-900 pb-3">Demon Rankings</h2>
+
+                            ${!list.demons || list.demons.length === 0 ? `
+                                <div class="py-16 text-center glass-panel rounded-2xl border border-neutral-800">
+                                    <i class="fa-solid fa-shield-halved text-3xl text-neutral-700 mb-3"></i>
+                                    <p class="text-neutral-500 text-xs">No demons added to this list yet.</p>
+                                </div>
+                            ` : list.demons.map((demon, index) => `
+                                <div class="glass-panel glass-panel-hover rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border ${theme.border}">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="w-10 h-10 rounded-xl bg-black border border-neutral-800 flex items-center justify-center text-xs font-black ${theme.accentText} flex-shrink-0">
+                                            #${index + 1}
+                                        </div>
+                                        <div class="space-y-1">
+                                            <div class="flex items-center space-x-2">
+                                                <h3 class="text-base font-bold text-white">${escapeHtml(demon.name)}</h3>
+                                                ${demon.levelId ? `<span class="px-2 py-0.5 rounded-md bg-neutral-900 border border-neutral-800 text-neutral-400 text-[10px] font-mono">ID: ${escapeHtml(demon.levelId)}</span>` : ''}
+                                                <span class="px-2 py-0.5 rounded-md border ${theme.border} text-neutral-300 text-[10px] font-bold uppercase tracking-wider">
+                                                    ${escapeHtml(demon.difficulty)}
+                                                </span>
+                                            </div>
+                                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-500">
+                                                <span>Creator: <strong class="text-neutral-300 font-semibold">${escapeHtml(demon.creator)}</strong></span>
+                                                <span>Verifier: <strong class="text-neutral-300 font-semibold">${escapeHtml(demon.verifier)}</strong></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-2 w-full md:w-auto justify-end">
+                                        ${demon.videoUrl ? `
+                                            <a href="${escapeHtml(demon.videoUrl)}" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-xl border border-neutral-800 hover:bg-neutral-900 text-neutral-300 text-xs font-semibold transition flex items-center space-x-1.5">
+                                                <i class="fa-brands fa-youtube text-xs"></i>
+                                                <span>Proof</span>
+                                            </a>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            function renderEditorView(params) {
+                const listId = params.listId;
+                const list = allLists.find(l => l.id === listId);
+                const routerView = document.getElementById('router-view');
+                if (!list || !currentUser || currentUser.isAnonymous || !userProfile || userProfile.uid !== list.userId) {
+                    routerView.innerHTML = `<div class="py-20 text-center text-neutral-500 text-xs">Unauthorized or list not found.</div>`;
+                    return;
+                }
+
+                routerView.innerHTML = `
+                    <div class="space-y-8 py-4">
+                        <div class="glass-panel rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 border border-neutral-800">
+                            <div class="space-y-1 w-full md:w-auto">
+                                <span class="text-[10px] font-bold uppercase tracking-widest text-neutral-500">List Management</span>
+                                <h1 class="text-2xl font-black text-white">${escapeHtml(list.title)}</h1>
+                                <p class="text-neutral-500 text-xs">Add, edit, or reorder demons in your custom list.</p>
+                            </div>
+                            <div class="flex items-center space-x-3 w-full md:w-auto justify-end">
+                                <button onclick="router.navigate('list_detail', { listId: '${list.id}' })" class="px-3.5 py-2 rounded-xl bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white font-semibold text-xs transition">
+                                    View Public Page
+                                </button>
+                                <button onclick="openAddDemonModal('${list.id}')" class="px-4 py-2 rounded-xl bg-white text-black font-bold text-xs uppercase tracking-wider transition flex items-center space-x-1.5 shadow-lg shadow-white/5">
+                                    <i class="fa-solid fa-plus text-xs"></i>
+                                    <span>Add Demon</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <h2 class="text-sm font-bold text-white uppercase tracking-wider border-b border-neutral-900 pb-3">Demons (${list.demons ? list.demons.length : 0})</h2>
+
+                            ${!list.demons || list.demons.length === 0 ? `
+                                <div class="py-16 text-center glass-panel rounded-2xl border border-neutral-800">
+                                    <i class="fa-solid fa-circle-plus text-3xl text-neutral-700 mb-3"></i>
+                                    <p class="text-neutral-500 text-xs mb-4">No demons in this list yet.</p>
+                                    <button onclick="openAddDemonModal('${list.id}')" class="px-4 py-2 bg-white text-black font-bold rounded-xl text-xs uppercase tracking-wider">Add First Demon</button>
+                                </div>
+                            ` : list.demons.map((demon, index) => `
+                                <div class="glass-panel rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-neutral-800/80">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="flex flex-col space-y-1">
+                                            <button onclick="moveDemon('${list.id}', ${index}, -1)" ${index === 0 ? 'disabled class="opacity-20 cursor-not-allowed text-neutral-600"' : 'class="text-neutral-500 hover:text-white transition"'}>
+                                                <i class="fa-solid fa-chevron-up text-xs"></i>
+                                            </button>
+                                            <button onclick="moveDemon('${list.id}', ${index}, 1)" ${index === list.demons.length - 1 ? 'disabled class="opacity-20 cursor-not-allowed text-neutral-600"' : 'class="text-neutral-500 hover:text-white transition"'}>
+                                                <i class="fa-solid fa-chevron-down text-xs"></i>
+                                            </button>
+                                        </div>
+                                        <div class="w-10 h-10 rounded-xl bg-black border border-neutral-800 flex items-center justify-center text-xs font-black text-white flex-shrink-0">
+                                            #${index + 1}
+                                        </div>
+                                        <div class="space-y-1">
+                                            <div class="flex items-center space-x-2">
+                                                <h3 class="text-base font-bold text-white">${escapeHtml(demon.name)}</h3>
+                                                ${demon.levelId ? `<span class="px-2 py-0.5 rounded-md bg-neutral-900 border border-neutral-800 text-neutral-400 text-[10px] font-mono">ID: ${escapeHtml(demon.levelId)}</span>` : ''}
+                                                <span class="px-2 py-0.5 rounded-md border border-neutral-800 text-neutral-400 text-[10px] font-bold uppercase tracking-wider">
+                                                    ${escapeHtml(demon.difficulty)}
+                                                </span>
+                                            </div>
+                                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-500">
+                                                <span>Creator: <strong class="text-neutral-300 font-semibold">${escapeHtml(demon.creator)}</strong></span>
+                                                <span>Verifier: <strong class="text-neutral-300 font-semibold">${escapeHtml(demon.verifier)}</strong></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-2 w-full md:w-auto justify-end">
+                                        <button onclick="openEditDemonModal('${list.id}', '${demon.id}')" class="p-2 rounded-xl border border-neutral-800 hover:bg-neutral-800 text-neutral-400 hover:text-white transition" title="Edit Demon">
+                                            <i class="fa-solid fa-pen text-xs"></i>
+                                        </button>
+                                        <button onclick="deleteDemon('${list.id}', '${demon.id}')" class="p-2 rounded-xl border border-neutral-800 hover:bg-neutral-800 text-neutral-400 hover:text-white transition" title="Delete Demon">
+                                            <i class="fa-solid fa-trash text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            window.openAddDemonModal = function(listId) {
+                openModal(`
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center text-white">
+                                <i class="fa-solid fa-plus text-xs"></i>
+                            </div>
+                            <h3 class="text-base font-bold text-white uppercase tracking-wider">Add Demon</h3>
+                        </div>
+                        <button onclick="closeModal()" class="text-neutral-500 hover:text-white transition"><i class="fa-solid fa-xmark text-sm"></i></button>
+                    </div>
+                    <form onsubmit="handleSaveDemon(event, '${listId}', null)" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">Level Name</label>
+                                <input type="text" id="demon-name" required class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs" placeholder="e.g. Slaughterhouse">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">Level ID (Optional)</label>
+                                <input type="text" id="demon-level-id" class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs" placeholder="e.g. 75210948">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">Creator</label>
+                                <input type="text" id="demon-creator" required class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs" placeholder="e.g. Icedcave">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">Verifier</label>
+                                <input type="text" id="demon-verifier" required class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs" placeholder="e.g. SpaceUK">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">Difficulty</label>
+                            <select id="demon-difficulty" class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs">
+                                <option value="Extreme Demon">Extreme Demon</option>
+                                <option value="Insane Demon">Insane Demon</option>
+                                <option value="Hard Demon">Hard Demon</option>
+                                <option value="Medium Demon">Medium Demon</option>
+                                <option value="Easy Demon">Easy Demon</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">YouTube Proof Link</label>
+                            <input type="url" id="demon-video" class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs" placeholder="https://youtube.com/watch?v=...">
+                        </div>
+                        <button type="submit" class="w-full py-2.5 bg-white text-black font-bold rounded-xl hover:bg-neutral-200 transition text-xs uppercase tracking-wider">
+                            Add to List
+                        </button>
+                    </form>
+                `);
+            };
+
+            window.openEditDemonModal = function(listId, demonId) {
+                const list = allLists.find(l => l.id === listId);
+                const demon = list ? list.demons.find(d => d.id === demonId) : null;
+                if (!demon) return;
+
+                openModal(`
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center text-white">
+                                <i class="fa-solid fa-pen text-xs"></i>
+                            </div>
+                            <h3 class="text-base font-bold text-white uppercase tracking-wider">Edit Demon</h3>
+                        </div>
+                        <button onclick="closeModal()" class="text-neutral-500 hover:text-white transition"><i class="fa-solid fa-xmark text-sm"></i></button>
+                    </div>
+                    <form onsubmit="handleSaveDemon(event, '${listId}', '${demonId}')" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">Level Name</label>
+                                <input type="text" id="demon-name" required value="${escapeHtml(demon.name)}" class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">Level ID</label>
+                                <input type="text" id="demon-level-id" value="${escapeHtml(demon.levelId || '')}" class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">Creator</label>
+                                <input type="text" id="demon-creator" required value="${escapeHtml(demon.creator)}" class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">Verifier</label>
+                                <input type="text" id="demon-verifier" required value="${escapeHtml(demon.verifier)}" class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">Difficulty</label>
+                            <select id="demon-difficulty" class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs">
+                                <option value="Extreme Demon" ${demon.difficulty === 'Extreme Demon' ? 'selected' : ''}>Extreme Demon</option>
+                                <option value="Insane Demon" ${demon.difficulty === 'Insane Demon' ? 'selected' : ''}>Insane Demon</option>
+                                <option value="Hard Demon" ${demon.difficulty === 'Hard Demon' ? 'selected' : ''}>Hard Demon</option>
+                                <option value="Medium Demon" ${demon.difficulty === 'Medium Demon' ? 'selected' : ''}>Medium Demon</option>
+                                <option value="Easy Demon" ${demon.difficulty === 'Easy Demon' ? 'selected' : ''}>Easy Demon</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1.5">YouTube Proof Link</label>
+                            <input type="url" id="demon-video" value="${escapeHtml(demon.videoUrl || '')}" class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-white transition text-xs">
+                        </div>
+                        <button type="submit" class="w-full py-2.5 bg-white text-black font-bold rounded-xl hover:bg-neutral-200 transition text-xs uppercase tracking-wider">
+                            Save Changes
+                        </button>
+                    </form>
+                `);
+            };
+
+            window.handleSaveDemon = function(e, listId, demonId) {
+                e.preventDefault();
+                const list = allLists.find(l => l.id === listId);
+                if (!list) return;
+
+                const name = document.getElementById('demon-name').value.trim();
+                const levelId = document.getElementById('demon-level-id').value.trim();
+                const creator = document.getElementById('demon-creator').value.trim();
+                const verifier = document.getElementById('demon-verifier').value.trim();
+                const difficulty = document.getElementById('demon-difficulty').value;
+                const videoUrl = document.getElementById('demon-video').value.trim();
+
+                if (!list.demons) list.demons = [];
+
+                if (demonId) {
+                    const demonIndex = list.demons.findIndex(d => d.id === demonId);
+                    if (demonIndex !== -1) {
+                        list.demons[demonIndex] = { id: demonId, levelId, name, creator, verifier, difficulty, videoUrl };
+                        showToast('Demon updated');
+                    }
+                } else {
+                    const newDemon = { id: 'd-' + Date.now(), levelId, name, creator, verifier, difficulty, videoUrl };
+                    list.demons.push(newDemon);
+                    showToast('Demon added to list');
+                }
+
+                list.updatedAt = Date.now();
+                saveListsToStorage();
+                closeModal();
+                renderEditorView({ listId });
+            };
+
+            window.moveDemon = function(listId, index, direction) {
+                const list = allLists.find(l => l.id === listId);
+                if (!list || !list.demons) return;
+                const newIndex = index + direction;
+                if (newIndex < 0 || newIndex >= list.demons.length) return;
+
+                const temp = list.demons[index];
+                list.demons[index] = list.demons[newIndex];
+                list.demons[newIndex] = temp;
+
+                list.updatedAt = Date.now();
+                saveListsToStorage();
+                renderEditorView({ listId });
+            };
+
+            window.deleteDemon = function(listId, demonId) {
+                const list = allLists.find(l => l.id === listId);
+                if (!list || !list.demons) return;
+                list.demons = list.demons.filter(d => d.id !== demonId);
+                list.updatedAt = Date.now();
+                saveListsToStorage();
+                showToast('Demon removed');
+                renderEditorView({ listId });
+            };
+
+            router.addRoute('home', renderHomeView);
+            router.addRoute('dashboard', renderDashboardView);
+            router.addRoute('profile', renderProfileView);
+            router.addRoute('list_detail', renderListDetailView);
+            router.addRoute('editor', renderEditorView);
+
+            // Initialize App
+            updateAuthNav();
+            router.handleRoute();
+        </script>
+    </div>
+</body>
+</html>
