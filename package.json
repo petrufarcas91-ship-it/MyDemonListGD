@@ -1,0 +1,17 @@
+{
+  "name": "mydemonlist",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A social media-style web app where Geometry Dash players can create, customize, and share their own ranked Demon lists.",
+  "type": "module",
+  "dependencies": {
+    "@netlify/database": "^2.0.1",
+    "@netlify/functions": "^6.0.2",
+    "drizzle-orm": "^1.0.0-beta.22"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "drizzle-kit": "^1.0.0-beta.22",
+    "typescript": "^7.0.2"
+  }
+}

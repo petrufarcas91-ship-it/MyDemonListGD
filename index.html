@@ -226,57 +226,62 @@
                 modalContainer.classList.add('hidden');
             };
 
-            // Helper function to derive secure PBKDF2 password hashes with salt
-            async function hashPassword(password, saltHex = null) {
-                const encoder = new TextEncoder();
-                let salt;
-                if (saltHex) {
-                    salt = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
-                } else {
-                    salt = window.crypto.getRandomValues(new Uint8Array(16));
-                }
-                
-                const keyMaterial = await window.crypto.subtle.importKey(
-                    "raw",
-                    encoder.encode(password),
-                    "PBKDF2",
-                    false,
-                    ["deriveBits"]
-                );
+            // Shared API client — all players read and write the same community data
+            const SESSION_KEY = 'mydemonlist_session_v1';
+            window.sessionToken = localStorage.getItem(SESSION_KEY);
 
-                const derivedBits = await window.crypto.subtle.deriveBits(
-                    {
-                        name: "PBKDF2",
-                        salt: salt,
-                        iterations: 100000,
-                        hash: "SHA-256"
-                    },
-                    keyMaterial,
-                    256
-                );
+            window.api = async function(path, options = {}) {
+                const headers = { 'Content-Type': 'application/json' };
+                if (window.sessionToken) headers['Authorization'] = `Bearer ${window.sessionToken}`;
+                const res = await fetch(`/api/${path}`, {
+                    method: options.method || 'GET',
+                    headers,
+                    body: options.body ? JSON.stringify(options.body) : undefined
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || 'Request failed. Please try again.');
+                return data;
+            };
 
-                const hashArray = Array.from(new Uint8Array(derivedBits));
-                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-                const actualSaltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
-
-                return { hash: hashHex, salt: actualSaltHex };
+            function setSession(token, user) {
+                window.sessionToken = token;
+                if (token) localStorage.setItem(SESSION_KEY, token);
+                else localStorage.removeItem(SESSION_KEY);
+                currentUser = user ? { uid: user.uid, isAnonymous: false } : null;
+                userProfile = user || null;
             }
 
-            // LocalStorage persistence for Users, Lists, and Follows
-            window.allUsers = JSON.parse(localStorage.getItem('mydemonlist_users_v2')) || [];
-            window.allLists = JSON.parse(localStorage.getItem('mydemonlist_lists_v2')) || [];
-            window.allFollows = JSON.parse(localStorage.getItem('mydemonlist_follows_v1')) || [];
+            // Community data cache, refreshed from the server
+            window.allUsers = [];
+            window.allLists = [];
+            window.allFollows = [];
 
-            function saveListsToStorage() {
-                localStorage.setItem('mydemonlist_lists_v2', JSON.stringify(window.allLists));
+            async function loadState() {
+                const data = await api('state');
+                window.allUsers = data.users;
+                window.allLists = data.lists;
+                window.allFollows = data.follows;
             }
 
-            function saveUsersToStorage() {
-                localStorage.setItem('mydemonlist_users_v2', JSON.stringify(window.allUsers));
+            // List IDs are numeric; route params arrive as strings
+            window.findList = function(listId) {
+                return window.allLists.find(l => String(l.id) === String(listId));
+            };
+
+            function upsertList(list) {
+                const index = window.allLists.findIndex(l => l.id === list.id);
+                if (index === -1) window.allLists.unshift(list);
+                else window.allLists[index] = list;
             }
 
-            function saveFollowsToStorage() {
-                localStorage.setItem('mydemonlist_follows_v1', JSON.stringify(window.allFollows));
+            function upsertUser(user) {
+                const index = window.allUsers.findIndex(u => u.uid === user.uid);
+                if (index === -1) window.allUsers.push(user);
+                else window.allUsers[index] = user;
+            }
+
+            function rerenderCurrentRoute() {
+                window.router.handleRoute();
             }
 
             // Theme definitions system
@@ -372,7 +377,7 @@
                 return window.allFollows.filter(f => f.followerId === userId).length;
             };
 
-            window.toggleFollowUser = function(targetUserId) {
+            window.toggleFollowUser = async function(targetUserId) {
                 if (!window.currentUser || window.currentUser.isAnonymous || !window.userProfile) {
                     openLoginModal();
                     return;
@@ -384,30 +389,23 @@
                 }
 
                 const myUid = window.userProfile.uid;
-                const existingIndex = window.allFollows.findIndex(f => f.followerId === myUid && f.followingId === targetUserId);
-
                 const targetUser = window.allUsers.find(u => u.uid === targetUserId);
                 const targetName = targetUser ? targetUser.username : 'creator';
 
-                if (existingIndex !== -1) {
-                    window.allFollows.splice(existingIndex, 1);
-                    showToast(`Unfollowed ${targetName}`);
-                } else {
-                    window.allFollows.push({ followerId: myUid, followingId: targetUserId, timestamp: Date.now() });
-                    showToast(`You are now following ${targetName}!`);
+                try {
+                    const { following } = await api(`follows/${encodeURIComponent(targetUserId)}`, { method: 'POST' });
+                    window.allFollows = window.allFollows.filter(f => !(f.followerId === myUid && f.followingId === targetUserId));
+                    if (following) {
+                        window.allFollows.push({ followerId: myUid, followingId: targetUserId, timestamp: Date.now() });
+                        showToast(`You are now following ${targetName}!`);
+                    } else {
+                        showToast(`Unfollowed ${targetName}`);
+                    }
+                } catch (err) {
+                    showToast(err.message, 'error');
                 }
 
-                saveFollowsToStorage();
-
-                const currentHash = window.location.hash.slice(1) || 'home';
-                const [path, queryString] = currentHash.split('?');
-                const params = {};
-                if (queryString) {
-                    new URLSearchParams(queryString).forEach((val, key) => params[key] = val);
-                }
-                if (window.router.routes[path]) {
-                    window.router.routes[path](params);
-                }
+                rerenderCurrentRoute();
             };
 
             window.openFollowersModal = function(userId) {
@@ -567,31 +565,15 @@
                 const username = document.getElementById('login-username').value.trim();
                 const password = document.getElementById('login-password').value;
 
-                const existingUser = allUsers.find(u => u.username.toLowerCase() === username.toLowerCase());
-                if (!existingUser) {
-                    showToast('Account not found. Please register first.', 'error');
+                try {
+                    const { token, user } = await api('login', { method: 'POST', body: { username, password } });
+                    setSession(token, user);
+                } catch (err) {
+                    showToast(err.message, 'error');
                     btn.disabled = false;
                     btn.innerHTML = `<span>Log In</span>`;
                     return;
                 }
-
-                let isMatch = false;
-                if (existingUser.passwordSalt && existingUser.passwordHash) {
-                    const hashed = await hashPassword(password, existingUser.passwordSalt);
-                    isMatch = (hashed.hash === existingUser.passwordHash);
-                } else if (existingUser.password) {
-                    isMatch = (existingUser.password === password);
-                }
-
-                if (!isMatch) {
-                    showToast('Incorrect password.', 'error');
-                    btn.disabled = false;
-                    btn.innerHTML = `<span>Log In</span>`;
-                    return;
-                }
-
-                currentUser = { uid: existingUser.uid, isAnonymous: false };
-                userProfile = existingUser;
 
                 updateAuthNav();
                 closeModal();
@@ -616,32 +598,16 @@
                     return;
                 }
 
-                const usernameExists = allUsers.some(u => u.username.toLowerCase() === username.toLowerCase());
-                if (usernameExists) {
-                    showToast('Username is already taken. Please choose another.', 'error');
+                try {
+                    const { token, user } = await api('register', { method: 'POST', body: { username, password, avatarUrl } });
+                    setSession(token, user);
+                    upsertUser(user);
+                } catch (err) {
+                    showToast(err.message, 'error');
                     btn.disabled = false;
                     btn.innerHTML = `<span>Create Account</span>`;
                     return;
                 }
-
-                const { hash, salt } = await hashPassword(password);
-                const uid = 'usr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
-
-                const newUser = {
-                    uid: uid,
-                    username: username,
-                    avatarUrl: avatarUrl || '',
-                    passwordHash: hash,
-                    passwordSalt: salt,
-                    theme: 'monochrome',
-                    createdAt: Date.now()
-                };
-
-                allUsers.push(newUser);
-                saveUsersToStorage();
-
-                currentUser = { uid: newUser.uid, isAnonymous: false };
-                userProfile = newUser;
 
                 updateAuthNav();
                 closeModal();
@@ -650,8 +616,8 @@
             };
 
             window.handleLogout = function() {
-                currentUser = null;
-                userProfile = null;
+                api('logout', { method: 'POST' }).catch(() => {});
+                setSession(null, null);
                 updateAuthNav();
                 showToast('Logged out successfully.');
                 router.navigate('home');
@@ -692,20 +658,20 @@
                 `);
             };
 
-            window.handleSaveProfile = function(e) {
+            window.handleSaveProfile = async function(e) {
                 e.preventDefault();
                 if (!userProfile) return;
 
                 const avatarUrl = document.getElementById('edit-avatar').value.trim();
                 const theme = document.getElementById('edit-theme').value;
 
-                userProfile.avatarUrl = avatarUrl;
-                userProfile.theme = theme;
-
-                const userIndex = allUsers.findIndex(u => u.uid === userProfile.uid);
-                if (userIndex !== -1) {
-                    allUsers[userIndex] = userProfile;
-                    saveUsersToStorage();
+                try {
+                    const { user } = await api('me', { method: 'PUT', body: { avatarUrl, theme } });
+                    userProfile = user;
+                    upsertUser(user);
+                } catch (err) {
+                    showToast(err.message, 'error');
+                    return;
                 }
 
                 updateAuthNav();
@@ -767,7 +733,7 @@
                         <div class="max-w-xl mx-auto relative">
                             <div class="relative group">
                                 <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 text-xs transition group-focus-within:text-white"></i>
-                                <input type="text" id="user-search-input" oninput="handleUserSearch(this.value)" placeholder="Search creators by username..." class="w-full bg-neutral-950/80 border border-neutral-800/80 rounded-2xl pl-11 pr-4 py-3.5 text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-600 transition text-xs font-medium">
+                                <input type="text" id="user-search-input" oninput="handleUserSearch(this.value)" placeholder="Search players by username or find a list by ID (e.g. 42)..." class="w-full bg-neutral-950/80 border border-neutral-800/80 rounded-2xl pl-11 pr-4 py-3.5 text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-600 transition text-xs font-medium">
                             </div>
                             <div id="search-results-dropdown" class="hidden mt-2 bg-neutral-950 border border-neutral-800 rounded-2xl overflow-hidden z-20 absolute left-0 right-0 max-w-xl mx-auto shadow-2xl"></div>
                         </div>
@@ -804,9 +770,12 @@
                                         <div onclick="router.navigate('list_detail', { listId: '${list.id}' })" class="glass-panel glass-panel-hover rounded-2xl p-6 cursor-pointer flex flex-col justify-between group">
                                             <div class="space-y-4">
                                                 <div class="flex items-center justify-between">
+                                                    <div class="flex items-center">
                                                     <span class="px-2.5 py-1 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 text-[10px] font-bold tracking-wider">
                                                         ${demonCount} DEMONS
                                                     </span>
+                                                    <span class="ml-2 px-2 py-1 rounded-lg bg-black border border-neutral-800 text-neutral-500 text-[10px] font-mono font-bold">#${list.id}</span>
+                                                    </div>
                                                     <div onclick="event.stopPropagation(); router.navigate('profile', { uid: '${list.userId}' })" class="flex items-center space-x-2 group/author hover:opacity-80 transition">
                                                         ${getAvatarHtml(author, "w-5 h-5", "text-[9px]")}
                                                         <span class="text-xs text-neutral-400 group-hover/author:text-white font-medium">${escapeHtml(author.username)}</span>
@@ -835,16 +804,38 @@
 
             window.handleUserSearch = function(query) {
                 const dropdown = document.getElementById('search-results-dropdown');
-                if (!query || query.trim().length === 0) {
+                const q = (query || '').trim();
+                if (q.length === 0) {
                     dropdown.classList.add('hidden');
                     return;
                 }
 
-                const matches = allUsers.filter(u => u.username.toLowerCase().includes(query.toLowerCase().trim()));
-                if (matches.length === 0) {
-                    dropdown.innerHTML = `<div class="p-4 text-center text-xs text-neutral-500">No creators found matching "${escapeHtml(query)}"</div>`;
+                // Numeric queries (optionally prefixed with #) look up a list by its ID
+                const idMatch = q.match(/^#?(\d+)$/);
+                const listMatch = idMatch ? findList(idMatch[1]) : null;
+                const userMatches = allUsers.filter(u => u.username.toLowerCase().includes(q.toLowerCase().replace(/^#/, '')));
+
+                if (!listMatch && userMatches.length === 0) {
+                    dropdown.innerHTML = `<div class="p-4 text-center text-xs text-neutral-500">No players or lists found matching "${escapeHtml(q)}"</div>`;
                 } else {
-                    dropdown.innerHTML = matches.map(u => `
+                    const listHtml = listMatch ? (() => {
+                        const author = allUsers.find(u => u.uid === listMatch.userId) || { username: 'Unknown' };
+                        return `
+                            <div onclick="router.navigate('list_detail', { listId: '${listMatch.id}' }); document.getElementById('search-results-dropdown').classList.add('hidden');" class="p-3.5 hover:bg-neutral-900 border-b border-neutral-900/80 last:border-0 cursor-pointer flex items-center justify-between transition">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-300 flex-shrink-0">
+                                        <i class="fa-solid fa-list-ol text-xs"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-white">${escapeHtml(listMatch.title)}</div>
+                                        <div class="text-[10px] text-neutral-500">List #${listMatch.id} · by ${escapeHtml(author.username)}</div>
+                                    </div>
+                                </div>
+                                <span class="text-[10px] text-neutral-500 font-semibold">View List →</span>
+                            </div>
+                        `;
+                    })() : '';
+                    dropdown.innerHTML = listHtml + userMatches.slice(0, 10).map(u => `
                         <div onclick="router.navigate('profile', { uid: '${u.uid}' }); document.getElementById('search-results-dropdown').classList.add('hidden');" class="p-3.5 hover:bg-neutral-900 border-b border-neutral-900/80 last:border-0 cursor-pointer flex items-center justify-between transition">
                             <div class="flex items-center space-x-3">
                                 ${getAvatarHtml(u, "w-8 h-8", "text-xs")}
@@ -932,9 +923,12 @@
                                         <div class="glass-panel glass-panel-hover rounded-2xl p-6 flex flex-col justify-between group">
                                             <div class="space-y-4 cursor-pointer" onclick="router.navigate('list_detail', { listId: '${list.id}' })">
                                                 <div class="flex items-center justify-between">
+                                                    <div class="flex items-center">
                                                     <span class="px-2.5 py-1 rounded-lg ${theme.badge} text-[10px] font-bold tracking-wider">
                                                         ${demonCount} DEMONS
                                                     </span>
+                                                    <span class="ml-2 px-2 py-1 rounded-lg bg-black border border-neutral-800 text-neutral-500 text-[10px] font-mono font-bold">#${list.id}</span>
+                                                    </div>
                                                     <div class="flex items-center space-x-1">
                                                         <button onclick="event.stopPropagation(); openEditListModal('${list.id}')" class="p-1.5 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white transition" title="Edit List Info">
                                                             <i class="fa-solid fa-pen text-xs"></i>
@@ -989,32 +983,26 @@
                 `);
             };
 
-            window.handleCreateListSubmit = function(e) {
+            window.handleCreateListSubmit = async function(e) {
                 e.preventDefault();
                 if (!userProfile) return;
 
                 const title = document.getElementById('create-list-title').value.trim();
                 const description = document.getElementById('create-list-desc').value.trim();
 
-                const newList = {
-                    id: 'lst_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-                    userId: userProfile.uid,
-                    title: title,
-                    description: description,
-                    demons: [],
-                    createdAt: Date.now(),
-                    updatedAt: Date.now()
-                };
-
-                allLists.unshift(newList);
-                saveListsToStorage();
-                closeModal();
-                showToast('Demon list created!');
-                router.navigate('editor', { listId: newList.id });
+                try {
+                    const { list } = await api('lists', { method: 'POST', body: { title, description } });
+                    upsertList(list);
+                    closeModal();
+                    showToast(`Demon list created! List ID: ${list.id}`);
+                    router.navigate('editor', { listId: list.id });
+                } catch (err) {
+                    showToast(err.message, 'error');
+                }
             };
 
             window.openEditListModal = function(listId) {
-                const list = allLists.find(l => l.id === listId);
+                const list = findList(listId);
                 if (!list) return;
 
                 openModal(`
@@ -1043,19 +1031,23 @@
                 `);
             };
 
-            window.handleEditListSubmit = function(e, listId) {
+            window.handleEditListSubmit = async function(e, listId) {
                 e.preventDefault();
-                const list = allLists.find(l => l.id === listId);
+                const list = findList(listId);
                 if (!list) return;
 
-                list.title = document.getElementById('edit-list-title').value.trim();
-                list.description = document.getElementById('edit-list-desc').value.trim();
-                list.updatedAt = Date.now();
+                const title = document.getElementById('edit-list-title').value.trim();
+                const description = document.getElementById('edit-list-desc').value.trim();
 
-                saveListsToStorage();
-                closeModal();
-                showToast('List updated!');
-                renderDashboardView();
+                try {
+                    const { list: updated } = await api(`lists/${list.id}`, { method: 'PUT', body: { title, description } });
+                    upsertList(updated);
+                    closeModal();
+                    showToast('List updated!');
+                    renderDashboardView();
+                } catch (err) {
+                    showToast(err.message, 'error');
+                }
             };
 
             window.confirmDeleteList = function(listId) {
@@ -1076,17 +1068,28 @@
                 `);
             };
 
-            window.executeDeleteList = function(listId) {
-                window.allLists = allLists.filter(l => l.id !== listId);
-                saveListsToStorage();
-                closeModal();
-                showToast('List deleted');
-                renderDashboardView();
+            window.executeDeleteList = async function(listId) {
+                try {
+                    await api(`lists/${listId}`, { method: 'DELETE' });
+                    window.allLists = allLists.filter(l => String(l.id) !== String(listId));
+                    closeModal();
+                    showToast('List deleted');
+                    renderDashboardView();
+                } catch (err) {
+                    showToast(err.message, 'error');
+                }
             };
 
             function renderProfileView(params) {
-                const uid = params.uid;
-                const profileUser = allUsers.find(u => u.uid === uid) || { username: 'Unknown', avatarUrl: '', theme: 'monochrome' };
+                // Profiles can be opened by uid or by username (e.g. #profile?user=Zoink)
+                const profileUser = params.uid
+                    ? allUsers.find(u => u.uid === params.uid)
+                    : allUsers.find(u => u.username.toLowerCase() === String(params.user || '').toLowerCase());
+                if (!profileUser) {
+                    document.getElementById('router-view').innerHTML = `<div class="py-20 text-center text-neutral-500 text-xs">Player not found.</div>`;
+                    return;
+                }
+                const uid = profileUser.uid;
                 const userLists = allLists.filter(l => l.userId === uid);
                 const theme = getTheme(profileUser.theme);
 
@@ -1145,6 +1148,7 @@
                                                 <span class="px-2.5 py-1 rounded-lg ${theme.badge} text-[10px] font-bold tracking-wider">
                                                     ${list.demons ? list.demons.length : 0} DEMONS
                                                 </span>
+                                                <span class="px-2 py-1 rounded-lg bg-black border border-neutral-800 text-neutral-500 text-[10px] font-mono font-bold">#${list.id}</span>
                                             </div>
                                             <div>
                                                 <h3 class="text-base font-bold text-white group-hover:${theme.accentText} transition tracking-tight">${escapeHtml(list.title)}</h3>
@@ -1168,7 +1172,7 @@
 
             function renderListDetailView(params) {
                 const listId = params.listId;
-                const list = allLists.find(l => l.id === listId);
+                const list = findList(listId);
                 const routerView = document.getElementById('router-view');
                 if (!list) {
                     routerView.innerHTML = `<div class="py-20 text-center text-neutral-500 text-xs">Demon list not found.</div>`;
@@ -1188,6 +1192,7 @@
                                     <span class="px-2.5 py-1 rounded-lg ${theme.badge} text-[10px] font-bold tracking-wider">
                                         ${list.demons ? list.demons.length : 0} DEMONS
                                     </span>
+                                    <span class="px-2.5 py-1 rounded-lg bg-black border border-neutral-800 text-neutral-400 text-[10px] font-mono font-bold">LIST ID: ${list.id}</span>
                                     <div class="flex items-center space-x-2 cursor-pointer" onclick="router.navigate('profile', { uid: '${list.userId}' })">
                                         ${getAvatarHtml(author, "w-5 h-5", "text-[9px]")}
                                         <span class="text-xs text-neutral-400 font-medium hover:text-white transition">${escapeHtml(author.username)}</span>
@@ -1197,6 +1202,10 @@
                                 <p class="text-neutral-400 text-xs leading-relaxed max-w-2xl font-normal">${escapeHtml(list.description || 'No description provided.')}</p>
                             </div>
                             <div class="flex items-center space-x-3">
+                                <button onclick="navigator.clipboard.writeText('${list.id}'); showToast('List ID ${list.id} copied!');" class="px-3.5 py-2 rounded-xl bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white font-semibold text-xs transition flex items-center space-x-2">
+                                    <i class="fa-solid fa-hashtag text-neutral-400"></i>
+                                    <span>Copy ID</span>
+                                </button>
                                 <button onclick="navigator.clipboard.writeText(window.location.href); showToast('Link copied to clipboard!');" class="px-3.5 py-2 rounded-xl bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white font-semibold text-xs transition flex items-center space-x-2">
                                     <i class="fa-solid fa-share-nodes text-neutral-400"></i>
                                     <span>Share</span>
@@ -1256,7 +1265,7 @@
 
             function renderEditorView(params) {
                 const listId = params.listId;
-                const list = allLists.find(l => l.id === listId);
+                const list = findList(listId);
                 const routerView = document.getElementById('router-view');
                 if (!list || !currentUser || currentUser.isAnonymous || !userProfile || userProfile.uid !== list.userId) {
                     routerView.innerHTML = `<div class="py-20 text-center text-neutral-500 text-xs">Unauthorized or list not found.</div>`;
@@ -1267,7 +1276,7 @@
                     <div class="space-y-8 py-4">
                         <div class="glass-panel rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 border border-neutral-800">
                             <div class="space-y-1 w-full md:w-auto">
-                                <span class="text-[10px] font-bold uppercase tracking-widest text-neutral-500">List Management</span>
+                                <span class="text-[10px] font-bold uppercase tracking-widest text-neutral-500">List Management · ID #${list.id}</span>
                                 <h1 class="text-2xl font-black text-white">${escapeHtml(list.title)}</h1>
                                 <p class="text-neutral-500 text-xs">Add, edit, or reorder demons in your custom list.</p>
                             </div>
@@ -1388,7 +1397,7 @@
             };
 
             window.openEditDemonModal = function(listId, demonId) {
-                const list = allLists.find(l => l.id === listId);
+                const list = findList(listId);
                 const demon = list ? list.demons.find(d => d.id === demonId) : null;
                 if (!demon) return;
 
@@ -1444,9 +1453,16 @@
                 `);
             };
 
-            window.handleSaveDemon = function(e, listId, demonId) {
+            // Persists a new demon ordering/contents for a list
+            async function saveDemons(list, demons) {
+                const { list: updated } = await api(`lists/${list.id}`, { method: 'PUT', body: { demons } });
+                upsertList(updated);
+                return updated;
+            }
+
+            window.handleSaveDemon = async function(e, listId, demonId) {
                 e.preventDefault();
-                const list = allLists.find(l => l.id === listId);
+                const list = findList(listId);
                 if (!list) return;
 
                 const name = document.getElementById('demon-name').value.trim();
@@ -1456,49 +1472,57 @@
                 const difficulty = document.getElementById('demon-difficulty').value;
                 const videoUrl = document.getElementById('demon-video').value.trim();
 
-                if (!list.demons) list.demons = [];
+                const demons = [...(list.demons || [])];
+                let message;
 
                 if (demonId) {
-                    const demonIndex = list.demons.findIndex(d => d.id === demonId);
-                    if (demonIndex !== -1) {
-                        list.demons[demonIndex] = { id: demonId, levelId, name, creator, verifier, difficulty, videoUrl };
-                        showToast('Demon updated');
-                    }
+                    const demonIndex = demons.findIndex(d => d.id === demonId);
+                    if (demonIndex === -1) return;
+                    demons[demonIndex] = { id: demonId, levelId, name, creator, verifier, difficulty, videoUrl };
+                    message = 'Demon updated';
                 } else {
-                    const newDemon = { id: 'd-' + Date.now(), levelId, name, creator, verifier, difficulty, videoUrl };
-                    list.demons.push(newDemon);
-                    showToast('Demon added to list');
+                    demons.push({ id: 'd-' + Date.now(), levelId, name, creator, verifier, difficulty, videoUrl });
+                    message = 'Demon added to list';
                 }
 
-                list.updatedAt = Date.now();
-                saveListsToStorage();
-                closeModal();
-                renderEditorView({ listId });
+                try {
+                    await saveDemons(list, demons);
+                    showToast(message);
+                    closeModal();
+                    renderEditorView({ listId });
+                } catch (err) {
+                    showToast(err.message, 'error');
+                }
             };
 
-            window.moveDemon = function(listId, index, direction) {
-                const list = allLists.find(l => l.id === listId);
+            window.moveDemon = async function(listId, index, direction) {
+                const list = findList(listId);
                 if (!list || !list.demons) return;
                 const newIndex = index + direction;
                 if (newIndex < 0 || newIndex >= list.demons.length) return;
 
-                const temp = list.demons[index];
-                list.demons[index] = list.demons[newIndex];
-                list.demons[newIndex] = temp;
+                const demons = [...list.demons];
+                [demons[index], demons[newIndex]] = [demons[newIndex], demons[index]];
 
-                list.updatedAt = Date.now();
-                saveListsToStorage();
-                renderEditorView({ listId });
+                try {
+                    await saveDemons(list, demons);
+                    renderEditorView({ listId });
+                } catch (err) {
+                    showToast(err.message, 'error');
+                }
             };
 
-            window.deleteDemon = function(listId, demonId) {
-                const list = allLists.find(l => l.id === listId);
+            window.deleteDemon = async function(listId, demonId) {
+                const list = findList(listId);
                 if (!list || !list.demons) return;
-                list.demons = list.demons.filter(d => d.id !== demonId);
-                list.updatedAt = Date.now();
-                saveListsToStorage();
-                showToast('Demon removed');
-                renderEditorView({ listId });
+
+                try {
+                    await saveDemons(list, list.demons.filter(d => d.id !== demonId));
+                    showToast('Demon removed');
+                    renderEditorView({ listId });
+                } catch (err) {
+                    showToast(err.message, 'error');
+                }
             };
 
             router.addRoute('home', renderHomeView);
@@ -1507,9 +1531,31 @@
             router.addRoute('list_detail', renderListDetailView);
             router.addRoute('editor', renderEditorView);
 
-            // Initialize App
+            // Initialize App: restore session and load shared community data
+            async function initApp() {
+                document.getElementById('router-view').innerHTML = `
+                    <div class="py-24 text-center text-neutral-500 text-xs">
+                        <i class="fa-solid fa-spinner animate-spin text-lg mb-3"></i>
+                        <p>Loading community lists...</p>
+                    </div>
+                `;
+
+                const restoreSession = window.sessionToken
+                    ? api('me').then(({ user }) => setSession(window.sessionToken, user)).catch(() => setSession(null, null))
+                    : Promise.resolve();
+
+                try {
+                    await Promise.all([restoreSession, loadState()]);
+                } catch (err) {
+                    showToast('Could not load community data. Please refresh.', 'error');
+                }
+
+                updateAuthNav();
+                router.handleRoute();
+            }
+
             updateAuthNav();
-            router.handleRoute();
+            initApp();
         </script>
     </div>
 </body>
